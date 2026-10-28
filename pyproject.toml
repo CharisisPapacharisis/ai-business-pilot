@@ -1,0 +1,32 @@
+[project]
+name = "ai-business-pilot"
+version = "0.1.0"
+description = "A local MCP-powered business intelligence agent using DuckDB, LangChain, and LangGraph"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "duckdb>=1.5.6",
+    "langchain[mcp]>=1.4.6",
+    "langchain-ollama>=1.1.0",
+    "langgraph>=1.2.16",
+    "mcp[cli]>=2.3.0",
+    "ruff>=0.17.1",
+    "sqlglot>=30.24.0",
+    "python-dotenv>=1.2.4",
+    "langgraph-checkpoint-sqlite>=3.1.2",
+    "pydantic>=2.12",
+    "streamlit>=1.66.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
