@@ -42,6 +42,69 @@ LangChain: let a model reason with tools
 LangGraph: control when that reasoning runs and preserve workflow state
 ```
 
+### Quick library reference
+
+Most graph nodes are ordinary Python functions. The following library APIs
+turn those functions into model calls, tools, agents, or durable workflow
+steps.
+
+#### LangChain APIs used
+
+| API | What it provides here | Main location |
+|---|---|---|
+| `ChatOllama(...)` | A common chat-model interface for the local Ollama model | `model.py` |
+| `model.ainvoke(...)` | Asynchronously invoke the model with messages | `graph/nodes.py` |
+| `model.with_structured_output(...)` | Require planner and drafting results to match Pydantic schemas | `graph/nodes.py`, `services/issue_drafting.py` |
+| `@tool(...)` | Convert a Python function into a model-callable tool | `mcp_tools.py` |
+| `BaseTool` | Common type for discovered and application-defined tools | MCP, graph, and approval modules |
+| `tool.ainvoke(...)` | Execute a tool directly with validated arguments | `mcp_tools.py`, `approval.py` |
+| `MCPAdapter(...)` | Connect to MCP servers and expose their capabilities as LangChain tools | `mcp_client.py` |
+| `adapter.list_tools()` | Discover the tools provided by connected MCP servers | UI runtime and integration scripts |
+| `create_agent(...)` | Build the model → tool → result loop for an analyst | `graph/nodes.py` |
+| `ToolMessage(...)` | Represent or replace a tool result inside an agent run | `graph/agent_safety.py` |
+| `wrap_tool_call(...)` | Run middleware around agent tool calls | `graph/agent_safety.py` |
+| `ToolCallLimitMiddleware(...)` | Bound tool calls within one analyst run | `graph/agent_safety.py` |
+| `ModelCallLimitMiddleware(...)` | Bound model calls within one analyst run | `graph/agent_safety.py` |
+
+Compactly:
+
+```text
+ChatOllama + messages       → call the local model
+@tool + MCPAdapter          → define and discover capabilities
+create_agent                → run the model/tool investigation loop
+structured output           → obtain validated control data
+middleware + ToolMessage    → constrain tool use
+```
+
+#### LangGraph APIs used
+
+| API | What it provides here | Main location |
+|---|---|---|
+| `StateGraph(BusinessState)` | Define a workflow over shared typed state | `graph/builder.py` |
+| `add_node(...)` | Register an ordinary Python function as a graph step | `graph/builder.py`, `approval.py` |
+| `add_edge(...)` | Define an unconditional transition | `graph/builder.py`, `approval.py` |
+| `add_conditional_edges(...)` | Choose the next node from a routing function | `graph/builder.py`, `approval.py` |
+| `START` / `END` | Mark graph entry and completion | Graph builders |
+| `compile(...)` | Create the runnable graph and attach persistence services | `graph/builder.py`, `approval.py` |
+| `graph.ainvoke(...)` | Run or resume the compiled graph asynchronously | UI runtime and scripts |
+| `Runtime[...]` | Give a node access to runtime context and the long-term store | `graph/nodes.py` |
+| `AsyncSqliteSaver` | Persist state and interrupts by conversation `thread_id` | `ui/runtime.py`, persistence scripts |
+| `AsyncSqliteStore` | Persist explicit memory shared across threads by `user_id` | `ui/runtime.py`, memory scripts |
+| `interrupt(...)` | Pause the graph and expose the exact draft for human review | `approval.py` |
+| `Command(resume=...)` | Resume the paused graph with the human decision | `ui/runtime.py`, approval scripts |
+| `RetryPolicy(...)` | Apply bounded retries to write and verification nodes | `graph/builder.py`, `approval.py` |
+
+Compactly:
+
+```text
+StateGraph + nodes + edges  → define the workflow
+ainvoke                     → execute the workflow
+checkpointer                → preserve one conversation and its interrupts
+store                       → preserve explicit memory across conversations
+interrupt + Command         → pause and resume for human approval
+RetryPolicy                 → retry selected external-operation nodes
+```
+
 ## 2. The chat model
 
 `src/ai_business_pilot/model.py` creates a `ChatOllama` instance. A chat model
